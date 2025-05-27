@@ -28,6 +28,7 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     [SerializeField] private Button cardButton;
     [SerializeField] private CanvasGroup canvasGroup;
     private GameManager _gameManager;
+    private AudioManager _audioManager;
     
     [Header("Card Display Settings")]
     [SerializeField] private bool maintainAspectRatio = true;
@@ -59,6 +60,9 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         if (cardImage == null) cardImage = GetComponent<Image>();
         if (cardButton == null) cardButton = GetComponent<Button>();
         if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
+        
+        // Get AudioManager reference
+        _audioManager = AudioManager.Instance;
         
         SetupCardDisplay();
         
@@ -131,6 +135,12 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         _isFaceUp = !_isFaceUp;
         UpdateAppearance();
         OnCardFlipped?.Invoke(this);
+        
+        // Play flip sound
+        if (_audioManager != null)
+        {
+            _audioManager.PlayCardFlip();
+        }
     }
 
     public void MoveTo(Transform parent, Vector3 localPosition)
@@ -141,37 +151,24 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     public void SetInteractable(bool interactable)
     {
-        // Debug.Log($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) SetInteractable({interactable}): Called. Current alpha before change: {canvasGroup?.alpha}", gameObject);
         _isInteractable = interactable;
         if (cardButton != null) cardButton.interactable = interactable;
         if (canvasGroup != null)
         {
             canvasGroup.blocksRaycasts = interactable;
-            canvasGroup.alpha = 1f; // Always fully opaque
-            // Debug.Log($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) SetInteractable({interactable}): Alpha set to {canvasGroup.alpha}", gameObject);
+            canvasGroup.alpha = 1f;
         }
-        // else
-        // {
-        //     Debug.LogError($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) SetInteractable({interactable}): canvasGroup is NULL!", gameObject);
-        // }
     }
 
     public void ConfigureForDiscardPile()
     {
-        // Debug.Log($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) ConfigureForDiscardPile: Called. Current alpha before change: {canvasGroup?.alpha}", gameObject);
         _isInteractable = false;
         if (cardButton != null) cardButton.interactable = false;
-
         if (canvasGroup != null)
         {
             canvasGroup.blocksRaycasts = false;
-            canvasGroup.alpha = 1f; // Keep fully opaque
-            // Debug.Log($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) ConfigureForDiscardPile: Alpha set to {canvasGroup.alpha}", gameObject);
+            canvasGroup.alpha = 1f;
         }
-        // else
-        // {
-        //     Debug.LogError($"Card {Data?.cardName} (Instance ID: {GetInstanceID()}) ConfigureForDiscardPile: canvasGroup is NULL!", gameObject);
-        // }
     }
 
     private void UpdateAppearance()
@@ -179,7 +176,6 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         cardImage.sprite = _isFaceUp ? _data.frontSprite : _data.backSprite;
         cardImage.preserveAspect = maintainAspectRatio;
         
-        // Reapply uniform scaling whenever the sprite changes
         if (useUniformScale)
         {
             cardImage.SetNativeSize();
@@ -193,7 +189,6 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
                 cardImage.preferredHeight * uniformScale
             );
             
-            // Center the image
             imageRect.anchoredPosition = Vector2.zero;
         }
     }
@@ -209,24 +204,34 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             return;
         }
 
-        // Check for swap condition first if this card is a hand card
         if (PlayerIndex != -1 && _gameManager.CanSwapWithRevealedCard(this))
         {
             _gameManager.PerformSwap(this);
+            // Play place sound when card is swapped
+            if (_audioManager != null)
+            {
+                _audioManager.PlayCardPlace();
+            }
         }
-        // Check if this card IS the revealedDeckCard itself
         else if (_gameManager.IsRevealedDeckCard(this))
         {
-             _gameManager.HandleClickedRevealedDeckCard(this);
+            _gameManager.HandleClickedRevealedDeckCard(this);
+            // Play place sound when revealed deck card is taken
+            if (_audioManager != null)
+            {
+                _audioManager.PlayCardPlace();
+            }
         }
-        // NEW: Check if this card is a clickable top card of a discard pile
-        else if (PlayerIndex == -1 && _gameManager.IsTopDiscardCard(this, out int pileIndex)) 
+        else if (PlayerIndex == -1 && _gameManager.IsTopDiscardCard(this, out int pileIndex))
         {
-             _gameManager.HandleDiscardPileCardSelected(this, pileIndex);
+            _gameManager.HandleDiscardPileCardSelected(this, pileIndex);
+            // Play place sound when discard pile card is taken
+            if (_audioManager != null)
+            {
+                _audioManager.PlayCardPlace();
+            }
         }
-        // Otherwise, it's likely a click on a hand card not for a swap,
-        // or an invalid click. GameManager.HandleCardClick will sort it out.
-        else 
+        else
         {
             _gameManager.HandleCardClick(this);
         }
@@ -234,7 +239,10 @@ public class Card : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (_isInteractable) transform.localScale = _originalScale * 1.05f;
+        if (_isInteractable)
+        {
+            transform.localScale = _originalScale * 1.05f;
+        }
     }
 
     public void OnPointerExit(PointerEventData eventData)

@@ -24,6 +24,7 @@ public class GameManager : MonoBehaviour
     public Button endTurnButton;
     public TextMeshProUGUI gameOverText; // Added for Game Over message
     public GameObject gameOverOverlayPanel; // Added for screen dimming
+    public Button replayButton; // Added for replay functionality
     
     [Header("UI Score Displays")]
     public TextMeshProUGUI[] playerScoreTexts;
@@ -68,6 +69,12 @@ public class GameManager : MonoBehaviour
         {
             endTurnButton.onClick.AddListener(NextTurn);
             endTurnButton.gameObject.SetActive(false);  // Hide until game starts
+        }
+
+        if (replayButton != null)
+        {
+            replayButton.onClick.AddListener(RestartGame);
+            replayButton.gameObject.SetActive(false);  // Hide until game ends
         }
         
         // Initially hide game over text and overlay
@@ -458,6 +465,12 @@ public class GameManager : MonoBehaviour
             gameOverText.gameObject.SetActive(true);
         }
         
+        // Show replay button
+        if (replayButton != null)
+        {
+            replayButton.gameObject.SetActive(true);
+        }
+        
         // Display final scores for all players
         CalculateAndDisplayPlayerScores(); 
 
@@ -471,6 +484,12 @@ public class GameManager : MonoBehaviour
     // Reset game with a button click
     public void RestartGame()
     {
+        // Hide replay button
+        if (replayButton != null)
+        {
+            replayButton.gameObject.SetActive(false);
+        }
+        
         InitializeGame();
     }
 
@@ -630,6 +649,12 @@ public class GameManager : MonoBehaviour
         cardToDiscard.transform.SetAsLastSibling(); 
         cardToDiscard.ConfigureForDiscardPile(); // Makes it non-interactable and sets alpha
 
+        // Play card place sound
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayCardPlace();
+        }
+
         if (discardPileTopCards != null && pileIndex < discardPileTopCards.Length) {
             discardPileTopCards[pileIndex] = cardToDiscard; 
         }
@@ -714,7 +739,7 @@ public class GameManager : MonoBehaviour
             else
             {
                 discardPileTopCards[pileIndex] = null; // Safety: if the top child isn't a card
-                Debug.LogError($"Top child object on discard pile {pileIndex + 1} is not a Card component after taking one!");
+                Debug.Log($"Top child object on discard pile {pileIndex + 1} is not a Card component after taking one!");
             }
         }
         else
