@@ -847,9 +847,74 @@ public class GameManager : MonoBehaviour
                 Card card = playerCardsInHand[cardIdx];
                 if (card != null && card.Data != null && card.IsFaceUp)
                 {
-                    if (!isZeroPointCard[cardIdx])
+                      if (!isZeroPointCard[cardIdx])
                     {
-                        playerScore += card.Data.value;
+                        int cardValue = card.Data.value;
+
+                        if (cardValue == 11)
+                        {
+                            int minNeighborValue = int.MaxValue;
+                            
+                            bool isAlternateLayout = (currentPlayerIndex == 1 || currentPlayerIndex == 3);
+                            
+                            List<int> neighborIndices = new List<int>();
+
+                            if (isAlternateLayout)
+                            {
+                                int col = cardIdx / 2;
+                                int row = cardIdx % 2;
+                                
+                                if (col > 0)
+                                    neighborIndices.Add((col - 1) * 2 + row);
+                                
+                                if (col < 2)
+                                    neighborIndices.Add((col + 1) * 2 + row);
+
+                                if (row > 0)
+                                    neighborIndices.Add(cardIdx - 1);
+
+                                if (row < 1)
+                                    neighborIndices.Add(cardIdx + 1);
+                            }
+                            else
+                            {
+                                int row = cardIdx / 3;
+                                int col = cardIdx % 3;
+                                if (col > 0)
+                                    neighborIndices.Add(cardIdx - 1);
+                                if (col < 2)
+                                    neighborIndices.Add(cardIdx + 1);
+                                if (row > 0)
+                                    neighborIndices.Add(cardIdx - 3);
+                                if (row < 1)
+                                    neighborIndices.Add(cardIdx + 3);
+                            }
+
+                            foreach (int neighborIdx in neighborIndices)
+                            {
+                                if (neighborIdx >= 0 && neighborIdx < playerCardsInHand.Count)
+                                {
+                                    Card neighbor = playerCardsInHand[neighborIdx];
+                                    if (neighbor != null && neighbor.Data != null && neighbor.IsFaceUp && !isZeroPointCard[neighborIdx])
+                                    {
+                                        minNeighborValue = Mathf.Min(minNeighborValue, neighbor.Data.value);
+                                    }
+                                }
+                            }
+
+                            if (minNeighborValue != int.MaxValue)
+                            {
+                                playerScore += minNeighborValue;
+                            }
+                            else
+                            {
+                                playerScore += 0;
+                            }
+                        }
+                        else
+                        {
+                            playerScore += cardValue;
+                        }
                     }
                 }
             }
